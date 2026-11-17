@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Museum Booking Chatbot</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <style>
+        body {
+            background: #f4f1ea;
+            font-family: Arial, sans-serif;
+        }
+
+        .chat-container {
+            max-width: 650px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px #00000015;
+        }
+
+        .chat-header {
+            background: #243b36;
+            color: white;
+            padding: 20px;
+        }
+
+        #chat-box {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            white-space: pre-line;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            max-width: 90%;
+        }
+
+        .bot {
+            background: #e9eee9;
+            margin-right: auto;
+        }
+
+        .user {
+            background: #d4a373;
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <div class="chat-header">
+        <h3 class="mb-1">Museum Assistant</h3>
+        <p class="mb-0">Let's book your museum tickets!</p>
+    </div>
+
+    <div id="chat-box">
+        <div class="message bot">
+            Welcome! Send a message to begin your booking.
+        </div>
+    </div>
+
+    <form id="chat-form" class="p-3 border-top">
+        {% csrf_token %}
+
+        <div class="input-group">
+            <input
+                type="text"
+                id="message"
+                class="form-control"
+                placeholder="Type your message..."
+                autocomplete="off"
+                required
+            >
+
+            <button class="btn btn-success" type="submit">
+                Send
+            </button>
+        </div>
+    </form>
+
+    <div class="text-center pb-3">
+        <a href="{% url 'home' %}">Back to Home</a>
+    </div>
+
+</div>
+
+<script>
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message');
+    const chatBox = document.getElementById('chat-box');
+
+    function addMessage(text, sender) {
+        const message = document.createElement('div');
+
+        message.className = 'message ' + sender;
+        message.textContent = text;
+
+        chatBox.appendChild(message);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const text = input.value.trim();
+
+        if (!text) {
+            return;
+        }
+
+        addMessage(text, 'user');
+        input.value = '';
+
+        const csrfToken = document.querySelector(
+            '[name=csrfmiddlewaretoken]'
+        ).value;
+
+        try {
+            const response = await fetch(
+                "{% url 'chatbot_message' %}",
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':
+                            'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: new URLSearchParams({
+                        message: text
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                addMessage(
+                    data.reply || 'Something went wrong. Please try again.',
+                    'bot'
+                );
+                return;
+            }
+
+            addMessage(data.reply, 'bot');
+
+        } catch (error) {
+            addMessage(
+                'Unable to connect to the server. Please try again.',
+                'bot'
+            );
+        }
+    });
+</script>
+
+</body>
+</html>
